@@ -74,25 +74,30 @@
     return false;
   }
 
+  // Permanently opted out after we caught the page's own script rewriting
+  // text we'd already transformed (see content.js's mutation handling).
+  const BLOCK_ATTR = "data-bionic-skip";
+
   function shouldSkipElement(el) {
     if (!el) return true;
     if (SKIP_TAGS.has(el.tagName)) return true;
     if (el.isContentEditable) return true;
     if (el.closest && el.closest(`[${MARK_ATTR}]`)) return true;
+    if (el.closest && el.closest(`[${BLOCK_ATTR}]`)) return true;
     if (isTruncated(el)) return true;
     return false;
   }
 
   function transformTextNode(textNode, ratio, doc) {
     const text = textNode.nodeValue;
-    if (!text || !text.trim()) return;
+    if (!text || !text.trim()) return false;
 
     const parent = textNode.parentElement;
-    if (shouldSkipElement(parent)) return;
+    if (shouldSkipElement(parent)) return false;
 
     const wordPattern = /[A-Za-z0-9À-ɏЀ-ӿ']+|[^A-Za-z0-9À-ɏЀ-ӿ']+/g;
     const parts = text.match(wordPattern);
-    if (!parts) return;
+    if (!parts) return false;
 
     const wrapper = doc.createDocumentFragment();
     let changed = false;
@@ -107,6 +112,7 @@
     if (changed) {
       textNode.parentNode.replaceChild(wrapper, textNode);
     }
+    return changed;
   }
 
   function collectTextNodes(root, doc) {
@@ -122,14 +128,20 @@
     return nodes;
   }
 
+  // Marks are applied per-parent, only after a whole pass finishes (not as
+  // we go), so sibling text nodes under the same parent don't get skipped
+  // mid-pass, and so we can tell "already transformed" containers apart from
+  // brand-new ones when watching for future mutations.
   function apply(root, options) {
     const doc = root.ownerDocument || root;
     const ratio = (options && options.ratio) || 0.5;
     const nodes = collectTextNodes(root, doc);
-    for (const node of nodes) transformTextNode(node, ratio, doc);
-    if (root.nodeType === Node.ELEMENT_NODE) {
-      root.setAttribute(MARK_ATTR, "root");
+    const touchedParents = new Set();
+    for (const node of nodes) {
+      const parent = node.parentElement;
+      if (transformTextNode(node, ratio, doc) && parent) touchedParents.add(parent);
     }
+    touchedParents.forEach((el) => el.setAttribute(MARK_ATTR, "c"));
   }
 
   function revert(root) {
@@ -149,5 +161,9 @@
     marked.forEach((el) => el.removeAttribute(MARK_ATTR));
   }
 
-  global.BionicReader = { apply, revert };
+  function block(el) {
+    if (el && el.setAttribute) el.setAttribute(BLOCK_ATTR, "true");
+  }
+
+  global.BionicReader = { apply, revert, block, MARK_ATTR };
 })(typeof window !== "undefined" ? window : globalThis);
