@@ -11,11 +11,34 @@
     "OPTION", "CODE", "PRE", "SVG", "CANVAS", "IFRAME", BOLD_TAG.toUpperCase(),
   ]);
 
+  const MAX_BOLD_CHARS = 5;
+
+  // Apostrophes ("What's", "you're") shouldn't count toward a word's length —
+  // otherwise contractions get bolded further than a plain word of the same
+  // visible length, which is what made bolding look inconsistent.
+  function coreLength(word) {
+    let count = 0;
+    for (const ch of word) if (ch !== "'") count++;
+    return count;
+  }
+
+  // Maps a target count of "real" (non-apostrophe) characters back to an
+  // index into the original word, so slicing still lands in the right spot.
+  function coreSliceIndex(word, coreCount) {
+    let count = 0;
+    for (let i = 0; i < word.length; i++) {
+      if (word[i] !== "'") count++;
+      if (count >= coreCount) return i + 1;
+    }
+    return word.length;
+  }
+
   function fixationLength(word, ratio) {
-    const len = word.length;
-    if (len <= 1) return len;
-    if (len <= 3) return 1;
-    return Math.max(1, Math.round(len * ratio));
+    const len = coreLength(word);
+    if (len <= 1) return word.length;
+    if (len <= 3) return coreSliceIndex(word, 1);
+    const boldCore = Math.min(Math.ceil(len * ratio), MAX_BOLD_CHARS, len - 1);
+    return coreSliceIndex(word, Math.max(1, boldCore));
   }
 
   function bionicFragmentFromWord(word, ratio, doc) {
