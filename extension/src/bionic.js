@@ -78,12 +78,29 @@
   // text we'd already transformed (see content.js's mutation handling).
   const BLOCK_ATTR = "data-bionic-skip";
 
+  // Flexbox and Grid don't lay out a run of inline content the way normal
+  // text flow does: each direct child (including each anonymous box formed
+  // by a text node) becomes its own item, positioned and sized on its own.
+  // Splitting one text node into many <b>/text siblings inside such a
+  // container turns one flowing line of text into a row of independently
+  // shrinking/wrapping boxes, which is what produces run-together or
+  // scrambled-looking text. Safest to leave those containers alone.
+  const FLEX_GRID_DISPLAY = new Set(["flex", "inline-flex", "grid", "inline-grid"]);
+
+  function isFlexOrGridParent(el) {
+    const view = el.ownerDocument && el.ownerDocument.defaultView;
+    if (!view || !view.getComputedStyle) return false;
+    const style = view.getComputedStyle(el);
+    return !!style && FLEX_GRID_DISPLAY.has(style.display);
+  }
+
   function shouldSkipElement(el) {
     if (!el) return true;
     if (SKIP_TAGS.has(el.tagName)) return true;
     if (el.isContentEditable) return true;
     if (el.closest && el.closest(`[${MARK_ATTR}]`)) return true;
     if (el.closest && el.closest(`[${BLOCK_ATTR}]`)) return true;
+    if (isFlexOrGridParent(el)) return true;
     if (isTruncated(el)) return true;
     return false;
   }
