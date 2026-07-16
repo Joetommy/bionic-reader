@@ -54,11 +54,32 @@
     return frag;
   }
 
+  // Sites truncate long text with CSS (line-clamp, text-overflow: ellipsis)
+  // and recalculate the visible slice from the live DOM. Splitting that text
+  // into extra <b> elements throws off their measurement and produces
+  // garbled leftovers, so we leave truncated containers alone entirely.
+  const TRUNCATION_CHECK_DEPTH = 6;
+
+  function isTruncated(el) {
+    const view = el.ownerDocument && el.ownerDocument.defaultView;
+    if (!view || !view.getComputedStyle) return false;
+    let node = el;
+    for (let i = 0; node && i < TRUNCATION_CHECK_DEPTH; i++, node = node.parentElement) {
+      const style = view.getComputedStyle(node);
+      if (!style) continue;
+      const lineClamp = style.webkitLineClamp || style.getPropertyValue("-webkit-line-clamp");
+      if (lineClamp && lineClamp !== "none") return true;
+      if (style.textOverflow === "ellipsis" && style.overflow !== "visible") return true;
+    }
+    return false;
+  }
+
   function shouldSkipElement(el) {
     if (!el) return true;
     if (SKIP_TAGS.has(el.tagName)) return true;
     if (el.isContentEditable) return true;
     if (el.closest && el.closest(`[${MARK_ATTR}]`)) return true;
+    if (isTruncated(el)) return true;
     return false;
   }
 
