@@ -18,7 +18,7 @@ function getHostname(url) {
 }
 
 async function getStored() {
-  return browserApi.storage.sync.get(["globalEnabled", "siteOverrides", "ratio"]);
+  return browserApi.storage.local.get(["globalEnabled", "siteOverrides", "ratio"]);
 }
 
 function renderSiteControls(stored) {
@@ -56,12 +56,12 @@ async function notifyActiveTab() {
 }
 
 async function saveRatio() {
-  await browserApi.storage.sync.set({ ratio: Number(ratioSlider.value) / 100 });
+  await browserApi.storage.local.set({ ratio: Number(ratioSlider.value) / 100 });
   await notifyActiveTab();
 }
 
 async function saveGlobalEnabled() {
-  await browserApi.storage.sync.set({ globalEnabled: globalToggle.checked });
+  await browserApi.storage.local.set({ globalEnabled: globalToggle.checked });
   const stored = await getStored();
   renderSiteControls(stored);
   await notifyActiveTab();
@@ -72,7 +72,7 @@ async function saveSiteOverride() {
   const stored = await getStored();
   const overrides = { ...(stored.siteOverrides || {}) };
   overrides[hostname] = siteToggle.checked;
-  await browserApi.storage.sync.set({ siteOverrides: overrides });
+  await browserApi.storage.local.set({ siteOverrides: overrides });
   resetSiteButton.hidden = false;
   await notifyActiveTab();
 }
@@ -82,7 +82,7 @@ async function resetSiteOverride() {
   const stored = await getStored();
   const overrides = { ...(stored.siteOverrides || {}) };
   delete overrides[hostname];
-  await browserApi.storage.sync.set({ siteOverrides: overrides });
+  await browserApi.storage.local.set({ siteOverrides: overrides });
   const next = await getStored();
   renderSiteControls(next);
   await notifyActiveTab();

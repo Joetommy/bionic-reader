@@ -6,7 +6,7 @@ The goal is to transform text wherever you read it. We're starting with a browse
 
 ## Status
 
-v0.2, browser extension. You can toggle bionic reading per site or turn it on everywhere by default, adjust the fixation strength, and it keeps working as new content loads in. It's also been hardened against a few real-world layout edge cases (CSS truncation, flex/grid containers, pages that rewrite their own text after we've touched it).
+v0.3, browser extension. You can toggle bionic reading per site or turn it on everywhere by default, adjust the fixation strength, and it keeps working as new content loads in. It's also been hardened against a few real-world layout edge cases (CSS truncation, flex/grid containers, pages that rewrite their own text after we've touched it), and it has real icons now.
 
 ## Project layout
 
@@ -21,6 +21,10 @@ extension/          Web extension (Manifest V3, Chrome + Firefox)
   icons/
 docs/                Design notes, future-platform research
 ```
+
+## Privacy
+
+Nothing about what you read or where you go gets collected, stored remotely, or sent anywhere. All settings stay on your device. See [PRIVACY.md](PRIVACY.md) for the details, or just read the source in [extension/src](extension/src) — there isn't a single network request in it.
 
 ## How it works
 
@@ -43,7 +47,7 @@ docs/                Design notes, future-platform research
 - [x] Core bionic transformation engine
 - [x] Chrome/Firefox extension with popup toggle and intensity control
 - [x] Per-site toggle alongside a global default
-- [ ] Real toolbar/store icons (current ones are flat placeholders)
+- [x] Toolbar/store icons
 - [ ] Keyboard shortcut to toggle
 - [ ] Safari extension (via Xcode web extension converter)
 - [ ] System-wide text transformation (OS-level accessibility APIs or overlay rendering) for native apps beyond the browser

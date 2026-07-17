@@ -114,7 +114,7 @@
     }
   }
 
-  browserApi.storage.sync.get(["globalEnabled", "siteOverrides", "ratio"]).then(applySettings);
+  browserApi.storage.local.get(["globalEnabled", "siteOverrides", "ratio"]).then(applySettings);
 
   browserApi.runtime.onMessage.addListener((message) => {
     if (message && message.type === "BIONIC_SETTINGS_CHANGED") {
@@ -123,8 +123,8 @@
   });
 
   browserApi.storage.onChanged.addListener((changes, area) => {
-    if (area !== "sync") return;
+    if (area !== "local") return;
     if (!("globalEnabled" in changes) && !("siteOverrides" in changes) && !("ratio" in changes)) return;
-    browserApi.storage.sync.get(["globalEnabled", "siteOverrides", "ratio"]).then(applySettings);
+    browserApi.storage.local.get(["globalEnabled", "siteOverrides", "ratio"]).then(applySettings);
   });
 })();
