@@ -1,28 +1,96 @@
 const browserApi = typeof browser !== "undefined" ? browser : chrome;
 
-const enabledToggle = document.getElementById("enabled-toggle");
+const siteLabel = document.getElementById("site-label");
+const siteToggle = document.getElementById("site-toggle");
+const resetSiteButton = document.getElementById("reset-site");
+const globalToggle = document.getElementById("global-toggle");
 const ratioSlider = document.getElementById("ratio-slider");
 
-async function loadSettings() {
-  const stored = await browserApi.storage.sync.get(["enabled", "ratio"]);
-  enabledToggle.checked = !!stored.enabled;
-  ratioSlider.value = Math.round((stored.ratio ?? 0.5) * 100);
-}
+let hostname = null;
+let activeTabId = null;
 
-async function saveSettings() {
-  const settings = {
-    enabled: enabledToggle.checked,
-    ratio: Number(ratioSlider.value) / 100,
-  };
-  await browserApi.storage.sync.set(settings);
-
-  const [tab] = await browserApi.tabs.query({ active: true, currentWindow: true });
-  if (tab && tab.id) {
-    browserApi.tabs.sendMessage(tab.id, { type: "BIONIC_SETTINGS_CHANGED", settings }).catch(() => {});
+function getHostname(url) {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return null;
   }
 }
 
-enabledToggle.addEventListener("change", saveSettings);
-ratioSlider.addEventListener("change", saveSettings);
+async function getStored() {
+  return browserApi.storage.sync.get(["globalEnabled", "siteOverrides", "ratio"]);
+}
+
+function renderSiteControls(stored) {
+  const overrides = stored.siteOverrides || {};
+  const hasOverride = hostname && Object.prototype.hasOwnProperty.call(overrides, hostname);
+
+  if (!hostname) {
+    siteLabel.textContent = "Not available on this page";
+    siteToggle.disabled = true;
+    resetSiteButton.hidden = true;
+    return;
+  }
+
+  siteLabel.textContent = `Enabled on ${hostname}`;
+  siteToggle.disabled = false;
+  siteToggle.checked = hasOverride ? !!overrides[hostname] : !!stored.globalEnabled;
+  resetSiteButton.hidden = !hasOverride;
+}
+
+async function loadSettings() {
+  const [tab] = await browserApi.tabs.query({ active: true, currentWindow: true });
+  activeTabId = tab && tab.id;
+  hostname = tab ? getHostname(tab.url) : null;
+
+  const stored = await getStored();
+  renderSiteControls(stored);
+  globalToggle.checked = !!stored.globalEnabled;
+  ratioSlider.value = Math.round((stored.ratio ?? 0.5) * 100);
+}
+
+async function notifyActiveTab() {
+  if (!activeTabId) return;
+  const settings = await getStored();
+  browserApi.tabs.sendMessage(activeTabId, { type: "BIONIC_SETTINGS_CHANGED", settings }).catch(() => {});
+}
+
+async function saveRatio() {
+  await browserApi.storage.sync.set({ ratio: Number(ratioSlider.value) / 100 });
+  await notifyActiveTab();
+}
+
+async function saveGlobalEnabled() {
+  await browserApi.storage.sync.set({ globalEnabled: globalToggle.checked });
+  const stored = await getStored();
+  renderSiteControls(stored);
+  await notifyActiveTab();
+}
+
+async function saveSiteOverride() {
+  if (!hostname) return;
+  const stored = await getStored();
+  const overrides = { ...(stored.siteOverrides || {}) };
+  overrides[hostname] = siteToggle.checked;
+  await browserApi.storage.sync.set({ siteOverrides: overrides });
+  resetSiteButton.hidden = false;
+  await notifyActiveTab();
+}
+
+async function resetSiteOverride() {
+  if (!hostname) return;
+  const stored = await getStored();
+  const overrides = { ...(stored.siteOverrides || {}) };
+  delete overrides[hostname];
+  await browserApi.storage.sync.set({ siteOverrides: overrides });
+  const next = await getStored();
+  renderSiteControls(next);
+  await notifyActiveTab();
+}
+
+siteToggle.addEventListener("change", saveSiteOverride);
+resetSiteButton.addEventListener("click", resetSiteOverride);
+globalToggle.addEventListener("change", saveGlobalEnabled);
+ratioSlider.addEventListener("change", saveRatio);
 
 loadSettings();

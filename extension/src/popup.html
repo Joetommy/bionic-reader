@@ -10,15 +10,26 @@
     <header>
       <h1>Bionic Reader</h1>
     </header>
+
     <label class="row">
-      <span>Enabled on this page</span>
-      <input type="checkbox" id="enabled-toggle" />
+      <span id="site-label">Enabled on this site</span>
+      <input type="checkbox" id="site-toggle" />
     </label>
+    <button id="reset-site" class="link-button" hidden>Use default instead</button>
+
+    <hr />
+
+    <label class="row">
+      <span>Enable on all sites by default</span>
+      <input type="checkbox" id="global-toggle" />
+    </label>
+
     <label class="row">
       <span>Fixation strength</span>
       <input type="range" id="ratio-slider" min="30" max="70" step="5" />
     </label>
-    <p class="hint">Bolds the leading portion of each word so your eyes anchor faster while reading.</p>
+
+    <p class="hint">Bolds the leading portion of each word so your eyes anchor faster while reading. The site toggle above only affects the page you're on; the default controls every other site.</p>
   </main>
   <script src="popup.js"></script>
 </body>

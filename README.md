@@ -6,7 +6,7 @@ The goal is to transform text wherever you read it. We're starting with a browse
 
 ## Status
 
-v0.1, browser extension MVP. You can toggle bionic reading on any webpage, adjust the fixation strength, and it keeps working as new content loads in.
+v0.2, browser extension. You can toggle bionic reading per site or turn it on everywhere by default, adjust the fixation strength, and it keeps working as new content loads in. It's also been hardened against a few real-world layout edge cases (CSS truncation, flex/grid containers, pages that rewrite their own text after we've touched it).
 
 ## Project layout
 
@@ -42,7 +42,8 @@ docs/                Design notes, future-platform research
 
 - [x] Core bionic transformation engine
 - [x] Chrome/Firefox extension with popup toggle and intensity control
-- [ ] Per-site enable/disable and allow/block lists
+- [x] Per-site toggle alongside a global default
+- [ ] Real toolbar/store icons (current ones are flat placeholders)
 - [ ] Keyboard shortcut to toggle
 - [ ] Safari extension (via Xcode web extension converter)
 - [ ] System-wide text transformation (OS-level accessibility APIs or overlay rendering) for native apps beyond the browser

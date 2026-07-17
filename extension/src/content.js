@@ -7,14 +7,28 @@
  * can't predict every such case, so instead we watch for it: if something
  * other than us rewrites text inside a container we already transformed,
  * we revert that one container and permanently leave it alone.
+ *
+ * Whether we're enabled on this page comes from two settings: a global
+ * default (on/off everywhere) and a per-site override map that wins when
+ * present, so turning it on for reddit.com doesn't quietly turn it on
+ * everywhere else too.
  */
 (function () {
   const browserApi = typeof browser !== "undefined" ? browser : chrome;
   const MARK_ATTR = window.BionicReader.MARK_ATTR;
+  const hostname = window.location.hostname;
 
   let enabled = false;
   let ratio = 0.5;
   let observer = null;
+
+  function resolveEnabled(stored) {
+    const overrides = stored.siteOverrides || {};
+    if (Object.prototype.hasOwnProperty.call(overrides, hostname)) {
+      return !!overrides[hostname];
+    }
+    return !!stored.globalEnabled;
+  }
 
   function observeBody() {
     observer.observe(document.body, {
@@ -87,21 +101,20 @@
     window.BionicReader.revert(document.body);
   }
 
-  function applySettings(settings) {
-    ratio = settings.ratio ?? ratio;
-    if (settings.enabled && !enabled) {
+  function applySettings(stored) {
+    ratio = stored.ratio ?? ratio;
+    const nextEnabled = resolveEnabled(stored);
+    if (nextEnabled && !enabled) {
       enable();
-    } else if (!settings.enabled && enabled) {
+    } else if (!nextEnabled && enabled) {
       disable();
-    } else if (settings.enabled && enabled) {
+    } else if (nextEnabled && enabled) {
       disable();
       enable();
     }
   }
 
-  browserApi.storage.sync.get(["enabled", "ratio"]).then((stored) => {
-    applySettings({ enabled: !!stored.enabled, ratio: stored.ratio ?? 0.5 });
-  });
+  browserApi.storage.sync.get(["globalEnabled", "siteOverrides", "ratio"]).then(applySettings);
 
   browserApi.runtime.onMessage.addListener((message) => {
     if (message && message.type === "BIONIC_SETTINGS_CHANGED") {
@@ -111,11 +124,7 @@
 
   browserApi.storage.onChanged.addListener((changes, area) => {
     if (area !== "sync") return;
-    const next = {};
-    if ("enabled" in changes) next.enabled = changes.enabled.newValue;
-    if ("ratio" in changes) next.ratio = changes.ratio.newValue;
-    if (Object.keys(next).length) {
-      applySettings({ enabled: "enabled" in next ? next.enabled : enabled, ratio: next.ratio ?? ratio });
-    }
+    if (!("globalEnabled" in changes) && !("siteOverrides" in changes) && !("ratio" in changes)) return;
+    browserApi.storage.sync.get(["globalEnabled", "siteOverrides", "ratio"]).then(applySettings);
   });
 })();
