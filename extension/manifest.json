@@ -15,7 +15,6 @@
     "extension_pages": "script-src 'self'; object-src 'self'"
   },
   "background": {
-    "service_worker": "src/background.js",
     "scripts": ["src/background.js"]
   },
   "action": {
@@ -37,7 +36,10 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "bionic-reader@bionic-reader.dev",
-      "strict_min_version": "109.0"
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
     }
   }
 }
